@@ -13,7 +13,20 @@ class EspIrMqttPureCard extends HTMLElement {
       placeholder: "在此粘贴 Pronto 格式红外码...",
       hint: "纯 MQTT 通讯模式已激活",
       topic_info: "MQTT 发射主题",
+      newSignal: "收到新信号！",
+      topicCopied: "MQTT主题已复制",
+      statusOnline: "在线",
+      statusLearning: "学习中",
+      editorTitle: "卡片标题",
+      editorTopic: "MQTT Topic 前缀",
+      editorLang: "界面语言",
+      langAuto: "自动",
+      langZh: "中文",
+      langEn: "英语",
+      langRu: "俄语",
     },
+
+
     en: {
       title: "IR Remote Pro",
       learnedCode: "Captured Signal",
@@ -27,8 +40,48 @@ class EspIrMqttPureCard extends HTMLElement {
       placeholder: "Paste Pronto hex code here...",
       hint: "Pure MQTT Mode Active",
       topic_info: "MQTT Transmit Topic",
+      newSignal: "New signal received!",
+      topicCopied: "MQTT topic copied",
+      statusOnline: "ONLINE",
+      statusLearning: "LEARNING",
+      editorTitle: "Card Title",
+      editorTopic: "MQTT Topic Prefix",
+      editorLang: "Interface Language",
+      langAuto: "Auto",
+      langZh: "Chinese",
+      langEn: "English",
+      langRu: "Russian",
+    },
+
+    ru: {
+      title: "ИК Пульт Про",
+      learnedCode: "Полученный сигнал",
+      startLearn: "Начать обучение",
+      learning: "Ожидание сигнала...",
+      send: "Отправить",
+      clear: "Очистить",
+      copied: "Скопировано в буфер обмена",
+      sendSuccess: "Сигнал отправлен",
+      noCode: "Ожидание сигнала...",
+      placeholder: "Вставьте код Pronto здесь...",
+      hint: "Активен режим чистого MQTT",
+      topic_info: "MQTT тема передачи",
+      newSignal: "Получен новый сигнал!",
+      topicCopied: "Тема MQTT скопирована",
+      statusOnline: "ОНЛАЙН",
+      statusLearning: "ОБУЧЕНИЕ",
+      editorTitle: "Заголовок карточки",
+      editorTopic: "Префикс темы MQTT",
+      editorLang: "Язык интерфейса",
+      langAuto: "Авто",
+      langZh: "Китайский",
+      langEn: "Английский",
+      langRu: "Русский",
     },
   };
+
+
+
 
   static getConfigElement() {
     return document.createElement("esp-ir-mqtt-pure-card-editor");
@@ -37,18 +90,17 @@ class EspIrMqttPureCard extends HTMLElement {
   static getStubConfig() {
     return {
       title: "红外遥控器",
-      topic_prefix: "esp_ir/living_room",
+      topic_prefix: "newchuangan1/ir",
       language: "zh",
     };
   }
 
+
   setConfig(config) {
-    if (!config.topic_prefix) {
-      throw new Error("请在配置中指定 topic_prefix");
-    }
     const language = this._resolveLanguage(config.language);
     this._config = {
       ...config,
+      topic_prefix: config.topic_prefix || "newchuangan1/ir",
       title: config.title || EspIrMqttPureCard.TRANSLATIONS[language].title,
       language,
     };
@@ -58,6 +110,7 @@ class EspIrMqttPureCard extends HTMLElement {
     this._render();
   }
 
+
   set hass(hass) {
     this._hass = hass;
     if (!this._mqttSubscribed && this._config) {
@@ -66,10 +119,13 @@ class EspIrMqttPureCard extends HTMLElement {
   }
 
   _resolveLanguage(lang) {
-    if (lang === "zh" || lang === "en") return lang;
+    if (lang === "zh" || lang === "en" || lang === "ru") return lang;
     const hassLang = (this._hass?.language || "zh").toLowerCase();
-    return hassLang.startsWith("zh") ? "zh" : "en";
+    if (hassLang.startsWith("zh")) return "zh";
+    if (hassLang.startsWith("ru")) return "ru";
+    return "en";
   }
+
 
   _t(key) {
     const lang = this._config.language;
@@ -96,9 +152,10 @@ class EspIrMqttPureCard extends HTMLElement {
       this._learnedCode = payload.trim();
       this._isLearning = false;
       this._render();
-      this._toast("收到新信号！");
+      this._toast(this._t("newSignal"));
     }
   }
+
 
   _publish(topic, payload) {
     return this._hass.callService("mqtt", "publish", {
@@ -284,8 +341,9 @@ class EspIrMqttPureCard extends HTMLElement {
           </div>
           <div class="status-badge">
             <div class="dot ${this._isLearning ? 'learning' : ''}"></div>
-            <span>${this._isLearning ? 'LEARNING' : 'ONLINE'}</span>
+            <span>${this._isLearning ? this._t("statusLearning") : this._t("statusOnline")}</span>
           </div>
+
         </div>
 
         <div class="section-label">
@@ -342,8 +400,9 @@ class EspIrMqttPureCard extends HTMLElement {
     // 修正后的复制 Topic 事件
     root.getElementById("copy-topic-area").onclick = () => {
       const topic = `${this._config.topic_prefix}/send/pronto`;
-      this._copyToClipboard(topic, "MQTT主题已复制");
+      this._copyToClipboard(topic, this._t("topicCopied"));
     };
+
 
     // 点击显示区填充到输入框
     root.getElementById("learned-display").onclick = () => {
@@ -363,36 +422,76 @@ class EspIrMqttPureCardEditor extends HTMLElement {
     this._render();
   }
 
+  set hass(hass) {
+    this._hass = hass;
+  }
+
+  _lang() {
+    const configured = this._config?.language;
+    if (configured === "zh" || configured === "en" || configured === "ru") return configured;
+    const hassLang = (this._hass?.language || "zh").toLowerCase();
+    if (hassLang.startsWith("zh")) return "zh";
+    if (hassLang.startsWith("ru")) return "ru";
+    return "en";
+  }
+
+  _t(key) {
+    const lang = this._lang();
+    return EspIrMqttPureCard.TRANSLATIONS[lang][key] || key;
+  }
+
   _render() {
     if (!this.shadowRoot) this.attachShadow({ mode: "open" });
+    const lang = this._config.language || "";
     this.shadowRoot.innerHTML = `
       <style>
         .c-row { padding: 12px 0; display: flex; flex-direction: column; gap: 8px; }
         label { font-weight: bold; font-size: 0.9rem; color: var(--secondary-text-color); }
-        input { 
+        input, select {
           padding: 12px; border: 1px solid var(--divider-color); border-radius: 8px; 
           background: var(--card-background-color); color: var(--primary-text-color); outline: none;
         }
       </style>
       <div class="c-row">
-        <label>卡片标题</label>
+        <label>${this._t("editorTitle")}</label>
         <input id="title" value="${this._config.title || ""}">
       </div>
       <div class="c-row">
-        <label>MQTT Topic 前缀</label>
+        <label>${this._t("editorTopic")}</label>
         <input id="topic_prefix" value="${this._config.topic_prefix || ""}">
       </div>
+      <div class="c-row">
+        <label>${this._t("editorLang")}</label>
+        <select id="language">
+          <option value="" ${lang === "" ? "selected" : ""}>${this._t("langAuto")}</option>
+          <option value="zh" ${lang === "zh" ? "selected" : ""}>${this._t("langZh")}</option>
+          <option value="en" ${lang === "en" ? "selected" : ""}>${this._t("langEn")}</option>
+          <option value="ru" ${lang === "ru" ? "selected" : ""}>${this._t("langRu")}</option>
+        </select>
+      </div>
     `;
+
+    const fireChange = () => {
+      const event = new CustomEvent("config-changed", { detail: { config: this._config }, bubbles: true, composed: true });
+      this.dispatchEvent(event);
+    };
 
     this.shadowRoot.querySelectorAll("input").forEach(input => {
       input.onchange = (e) => {
         this._config = { ...this._config, [e.target.id]: e.target.value };
-        const event = new CustomEvent("config-changed", { detail: { config: this._config }, bubbles: true, composed: true });
-        this.dispatchEvent(event);
+        fireChange();
       };
     });
+
+    const langSelect = this.shadowRoot.getElementById("language");
+    langSelect.onchange = (e) => {
+      this._config = { ...this._config, language: e.target.value };
+      this._render();
+      fireChange();
+    };
   }
 }
+
 
 customElements.define("esp-ir-mqtt-pure-card", EspIrMqttPureCard);
 customElements.define("esp-ir-mqtt-pure-card-editor", EspIrMqttPureCardEditor);
